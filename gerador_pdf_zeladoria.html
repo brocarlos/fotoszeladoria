@@ -1,0 +1,761 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<title>Gerador de PDF - Zeladoria</title>
+<link rel="manifest" href="data:application/manifest+json;base64,eyJuYW1lIjoiR2VyYWRvciBkZSBQREYgLSBaZWxhZG9yaWEiLCJzaG9ydF9uYW1lIjoiWmVsYWRvcmlhIFBERiIsInN0YXJ0X3VybCI6Ii4iLCJkaXNwbGF5Ijoic3RhbmRhbG9uZSIsImJhY2tncm91bmRfY29sb3IiOiIjZjRmNWY3IiwidGhlbWVfY29sb3IiOiIjMjU2M2ViIn0=">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<style>
+  :root{
+    --primary:#2563eb;
+    --primary-dark:#1d4ed8;
+    --danger:#dc2626;
+    --gray-bg:#f4f5f7;
+    --border:#d7dbe1;
+    --text:#1f2430;
+    --muted:#6b7280;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    background:var(--gray-bg);
+    color:var(--text);
+    padding-bottom:100px;
+  }
+  header.app-header{
+    background:var(--primary);
+    color:#fff;
+    padding:16px 16px 14px;
+    position:sticky;
+    top:0;
+    z-index:20;
+    box-shadow:0 2px 6px rgba(0,0,0,.15);
+  }
+  header.app-header h1{
+    margin:0;
+    font-size:18px;
+    font-weight:700;
+  }
+  header.app-header p{
+    margin:2px 0 0;
+    font-size:12px;
+    opacity:.85;
+  }
+  main{
+    max-width:720px;
+    margin:0 auto;
+    padding:14px;
+  }
+  .card{
+    background:#fff;
+    border:1px solid var(--border);
+    border-radius:12px;
+    padding:14px;
+    margin-bottom:14px;
+  }
+  .field{
+    margin-bottom:10px;
+  }
+  .field label{
+    display:block;
+    font-size:12px;
+    font-weight:600;
+    color:var(--muted);
+    margin-bottom:4px;
+  }
+  input[type=text], input[type=time], input[type=date], select{
+    width:100%;
+    padding:10px 11px;
+    border:1px solid var(--border);
+    border-radius:8px;
+    font-size:15px;
+    background:#fff;
+    color:var(--text);
+  }
+  input:focus, select:focus{
+    outline:2px solid var(--primary);
+    outline-offset:0;
+  }
+  .row-2{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:10px;
+  }
+  @media (max-width:480px){
+    .row-2{grid-template-columns:1fr;}
+  }
+  button{
+    font-family:inherit;
+    cursor:pointer;
+    border:none;
+    border-radius:8px;
+    font-weight:600;
+    font-size:14px;
+  }
+  .btn-primary{
+    background:var(--primary);
+    color:#fff;
+    padding:11px 16px;
+  }
+  .btn-primary:active{background:var(--primary-dark);}
+  .btn-secondary{
+    background:#eef0f4;
+    color:var(--text);
+    padding:10px 14px;
+  }
+  .btn-danger{
+    background:#fdecec;
+    color:var(--danger);
+    padding:8px 12px;
+    font-size:13px;
+  }
+  .btn-block{width:100%;}
+  .btn-row{
+    display:flex;
+    gap:10px;
+    flex-wrap:wrap;
+  }
+  .zelador-block{
+    border:1px dashed var(--border);
+    border-radius:10px;
+    padding:12px;
+    margin-bottom:10px;
+    background:#fafbfc;
+  }
+  .zelador-block h4{
+    margin:0 0 8px;
+    font-size:13px;
+    color:var(--muted);
+    text-transform:uppercase;
+    letter-spacing:.03em;
+  }
+  .linha-card{
+    border:1px solid var(--border);
+    border-radius:12px;
+    padding:12px;
+    margin-bottom:14px;
+    background:#fff;
+  }
+  .linha-card-header{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    margin-bottom:10px;
+  }
+  .linha-card-header span{
+    font-weight:700;
+    font-size:14px;
+  }
+  .photo-picker .btn-row{margin-bottom:8px;}
+  .thumb-strip{
+    display:flex;
+    gap:6px;
+    overflow-x:auto;
+    padding:4px 0;
+  }
+  .thumb-wrap{
+    position:relative;
+    flex:0 0 auto;
+  }
+  .thumb-wrap img{
+    width:64px;
+    height:64px;
+    object-fit:cover;
+    border-radius:6px;
+    border:1px solid var(--border);
+    display:block;
+  }
+  .thumb-remove{
+    position:absolute;
+    top:-6px;
+    right:-6px;
+    width:20px;
+    height:20px;
+    border-radius:50%;
+    background:var(--danger);
+    color:#fff;
+    font-size:12px;
+    line-height:20px;
+    text-align:center;
+    padding:0;
+  }
+  .photo-status{
+    font-size:12px;
+    color:var(--muted);
+    margin:4px 0 0;
+  }
+  input[type=file]{display:none;}
+  .fixed-bottom{
+    position:fixed;
+    left:0;right:0;bottom:0;
+    background:#fff;
+    border-top:1px solid var(--border);
+    padding:10px 14px calc(10px + env(safe-area-inset-bottom));
+    z-index:20;
+  }
+  .fixed-bottom .btn-row{max-width:720px;margin:0 auto;}
+  .toast{
+    position:fixed;
+    top:14px;left:50%;
+    transform:translateX(-50%);
+    background:#1f2430;
+    color:#fff;
+    padding:10px 16px;
+    border-radius:8px;
+    font-size:13px;
+    z-index:50;
+    opacity:0;
+    pointer-events:none;
+    transition:opacity .25s;
+    max-width:90%;
+    text-align:center;
+  }
+  .toast.show{opacity:1;}
+  .section-title{
+    font-size:13px;
+    font-weight:700;
+    color:var(--muted);
+    text-transform:uppercase;
+    letter-spacing:.04em;
+    margin:0 0 10px;
+  }
+</style>
+</head>
+<body>
+
+<header class="app-header">
+  <h1>Gerador de PDF - Zeladoria</h1>
+  <p>Preencha os dados, anexe as fotos e gere o relatório em PDF</p>
+</header>
+
+<main>
+  <div class="card">
+    <p class="section-title">Dados gerais</p>
+    <div class="field">
+      <label>Empresa</label>
+      <input type="text" id="campo-empresa" placeholder="Nome da empresa">
+    </div>
+    <div class="field">
+      <label>Frente de serviço</label>
+      <input type="text" id="campo-frente" placeholder="Frente de serviço">
+    </div>
+    <div class="field">
+      <label>Encarregado</label>
+      <input type="text" id="campo-encarregado" placeholder="Nome do encarregado">
+    </div>
+    <div class="field">
+      <label>Serviço</label>
+      <select id="campo-servico">
+        <option value="Zeladoria">Zeladoria</option>
+      </select>
+    </div>
+  </div>
+
+  <div id="linhas-container"></div>
+
+  <button class="btn-secondary btn-block" id="btn-add-linha" type="button">+ Adicionar zeladores</button>
+
+  <div class="card" style="margin-top:14px;">
+    <p class="section-title">Projeto</p>
+    <div class="btn-row">
+      <button class="btn-secondary" id="btn-importar" type="button">Importar projeto...</button>
+      <button class="btn-secondary" id="btn-exportar" type="button">Exportar projeto...</button>
+    </div>
+    <input type="file" id="input-importar-projeto" accept="application/json">
+  </div>
+</main>
+
+<div class="fixed-bottom">
+  <div class="btn-row">
+    <button class="btn-primary btn-block" id="btn-gerar" type="button">Gerar PDF</button>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+let linhaSeq = 0;
+
+function toast(msg){
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.classList.add('show');
+  clearTimeout(toast._t);
+  toast._t = setTimeout(()=>el.classList.remove('show'), 2600);
+}
+
+function hojeISO(){
+  const d = new Date();
+  return d.toISOString().slice(0,10);
+}
+
+function criarZeladorField(){
+  const id = 'z' + Math.random().toString(36).slice(2,9);
+  const wrap = document.createElement('div');
+  wrap.className = 'zelador-block';
+  wrap.dataset.fotos = '[]'; // guardado via propriedade JS, não no DOM
+  wrap._fotos = []; // array de {dataUrl, w, h}
+
+  wrap.innerHTML = `
+    <h4>Zelador(a)</h4>
+    <div class="photo-picker">
+      <div class="btn-row">
+        <button type="button" class="btn-secondary btn-importar-fotos">Selecionar fotos</button>
+        <button type="button" class="btn-secondary btn-limpar-fotos">Limpar</button>
+      </div>
+      <input type="file" class="input-fotos" accept="image/*" multiple>
+      <p class="photo-status">Nenhuma foto importada</p>
+      <div class="thumb-strip"></div>
+    </div>
+    <div class="field">
+      <label>Nome do zelador(a)</label>
+      <input type="text" class="campo-nome" placeholder="Nome do zelador(a)">
+    </div>
+    <div class="row-2">
+      <div class="field">
+        <label>Nº da casa (regional)</label>
+        <input type="text" class="campo-regional" placeholder="Regional">
+      </div>
+      <div class="field">
+        <label>Rua</label>
+        <input type="text" class="campo-rua" placeholder="Rua">
+      </div>
+    </div>
+    <div class="row-2">
+      <div class="field">
+        <label>Tipo</label>
+        <select class="campo-tipo">
+          <option value="Saída">Saída</option>
+          <option value="Entrada">Entrada</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>Horário</label>
+        <input type="time" class="campo-hora">
+      </div>
+    </div>
+    <div class="field">
+      <label>Data</label>
+      <input type="date" class="campo-data">
+    </div>
+  `;
+
+  wrap.querySelector('.campo-data').value = hojeISO();
+
+  const inputFotos = wrap.querySelector('.input-fotos');
+  wrap.querySelector('.btn-importar-fotos').addEventListener('click', ()=>inputFotos.click());
+  inputFotos.addEventListener('change', async (e)=>{
+    const arquivos = Array.from(e.target.files || []);
+    let adicionadas = 0;
+    for(const arquivo of arquivos){
+      try{
+        const dataUrl = await lerArquivoComoDataURL(arquivo);
+        const dim = await obterDimensoesImagem(dataUrl);
+        wrap._fotos.push({dataUrl, w:dim.w, h:dim.h});
+        adicionadas++;
+      }catch(err){ /* ignora imagem inválida */ }
+    }
+    if(adicionadas === 0 && arquivos.length > 0){
+      toast('Não consegui ler as imagens selecionadas.');
+    }
+    inputFotos.value = '';
+    atualizarThumbs(wrap);
+  });
+
+  wrap.querySelector('.btn-limpar-fotos').addEventListener('click', ()=>{
+    wrap._fotos = [];
+    atualizarThumbs(wrap);
+  });
+
+  return wrap;
+}
+
+function lerArquivoComoDataURL(arquivo){
+  return new Promise((resolve,reject)=>{
+    const reader = new FileReader();
+    reader.onload = ()=>resolve(reader.result);
+    reader.onerror = reject;
+    reader.readAsDataURL(arquivo);
+  });
+}
+
+function obterDimensoesImagem(dataUrl){
+  return new Promise((resolve,reject)=>{
+    const img = new Image();
+    img.onload = ()=>resolve({w:img.naturalWidth, h:img.naturalHeight});
+    img.onerror = reject;
+    img.src = dataUrl;
+  });
+}
+
+function atualizarThumbs(wrap){
+  const strip = wrap.querySelector('.thumb-strip');
+  const status = wrap.querySelector('.photo-status');
+  strip.innerHTML = '';
+  wrap._fotos.forEach((foto, idx)=>{
+    const t = document.createElement('div');
+    t.className = 'thumb-wrap';
+    t.innerHTML = `<img src="${foto.dataUrl}"><button type="button" class="thumb-remove">&times;</button>`;
+    t.querySelector('.thumb-remove').addEventListener('click', ()=>{
+      wrap._fotos.splice(idx,1);
+      atualizarThumbs(wrap);
+    });
+    strip.appendChild(t);
+  });
+  status.textContent = wrap._fotos.length
+    ? `${wrap._fotos.length} imagem(ns) importada(s)`
+    : 'Nenhuma foto importada';
+}
+
+function lerZeladorField(wrap){
+  const nome = wrap.querySelector('.campo-nome').value.trim();
+  if(!nome) return null;
+  const dataVal = wrap.querySelector('.campo-data').value;
+  const horaVal = wrap.querySelector('.campo-hora').value;
+  return {
+    nome,
+    tipo: wrap.querySelector('.campo-tipo').value,
+    hora: horaVal ? horaVal : '',
+    data: dataVal ? formatarDataBR(dataVal) : '',
+    regional: wrap.querySelector('.campo-regional').value.trim(),
+    rua: wrap.querySelector('.campo-rua').value.trim(),
+    fotos: wrap._fotos.map(f=>f.dataUrl),
+    fotosDim: wrap._fotos.map(f=>({w:f.w,h:f.h})),
+  };
+}
+
+function formatarDataBR(iso){
+  const [ano,mes,dia] = iso.split('-');
+  return `${dia}/${mes}/${ano}`;
+}
+
+function zeladorParaProjeto(wrap){
+  return {
+    nome: wrap.querySelector('.campo-nome').value.trim(),
+    tipo: wrap.querySelector('.campo-tipo').value,
+    hora: wrap.querySelector('.campo-hora').value,
+    data: wrap.querySelector('.campo-data').value,
+    regional: wrap.querySelector('.campo-regional').value.trim(),
+    rua: wrap.querySelector('.campo-rua').value.trim(),
+    fotos_base64: wrap._fotos.map(f=>f.dataUrl),
+  };
+}
+
+function carregarZeladorDeProjeto(wrap, dados){
+  wrap.querySelector('.campo-nome').value = dados.nome || '';
+  wrap.querySelector('.campo-regional').value = dados.regional || '';
+  wrap.querySelector('.campo-rua').value = dados.rua || '';
+  if(dados.tipo) wrap.querySelector('.campo-tipo').value = dados.tipo;
+  if(dados.hora) wrap.querySelector('.campo-hora').value = dados.hora;
+  if(dados.data) wrap.querySelector('.campo-data').value = dados.data;
+
+  const fotosBase64 = dados.fotos_base64 || [];
+  wrap._fotos = [];
+  const promessas = fotosBase64.map(async (dataUrl)=>{
+    try{
+      const dim = await obterDimensoesImagem(dataUrl);
+      wrap._fotos.push({dataUrl, w:dim.w, h:dim.h});
+    }catch(e){/* ignora */}
+  });
+  Promise.all(promessas).then(()=>atualizarThumbs(wrap));
+}
+
+function criarLinha(){
+  linhaSeq++;
+  const linha = document.createElement('div');
+  linha.className = 'linha-card';
+  linha.innerHTML = `
+    <div class="linha-card-header">
+      <span>Zeladores</span>
+      <button type="button" class="btn-danger btn-remover-linha">Remover linha</button>
+    </div>
+    <div class="zeladores-holder"></div>
+  `;
+  const holder = linha.querySelector('.zeladores-holder');
+  const z1 = criarZeladorField();
+  const z2 = criarZeladorField();
+  holder.appendChild(z1);
+  holder.appendChild(z2);
+  linha._z1 = z1;
+  linha._z2 = z2;
+
+  linha.querySelector('.btn-remover-linha').addEventListener('click', ()=>{
+    const container = document.getElementById('linhas-container');
+    if(container.children.length <= 1){
+      toast('É preciso manter ao menos uma linha.');
+      return;
+    }
+    linha.remove();
+  });
+
+  return linha;
+}
+
+function adicionarLinha(){
+  const container = document.getElementById('linhas-container');
+  container.appendChild(criarLinha());
+}
+
+document.getElementById('btn-add-linha').addEventListener('click', adicionarLinha);
+adicionarLinha();
+
+// ---------- Exportar / Importar projeto ----------
+
+document.getElementById('btn-exportar').addEventListener('click', ()=>{
+  const linhas = Array.from(document.getElementById('linhas-container').children).map(linha=>({
+    zelador1: zeladorParaProjeto(linha._z1),
+    zelador2: zeladorParaProjeto(linha._z2),
+  }));
+  const projeto = {
+    versao: 2,
+    empresa: document.getElementById('campo-empresa').value.trim(),
+    frente_servico: document.getElementById('campo-frente').value.trim(),
+    encarregado: document.getElementById('campo-encarregado').value.trim(),
+    servico: document.getElementById('campo-servico').value,
+    linhas,
+  };
+  const nomeArquivo = `${projeto.empresa || 'projeto'}.json`.replace(/\s+/g,'_');
+  const blob = new Blob([JSON.stringify(projeto, null, 2)], {type:'application/json'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = nomeArquivo;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+  toast('Projeto exportado.');
+});
+
+document.getElementById('btn-importar').addEventListener('click', ()=>{
+  document.getElementById('input-importar-projeto').click();
+});
+
+document.getElementById('input-importar-projeto').addEventListener('change', async (e)=>{
+  const arquivo = e.target.files[0];
+  e.target.value = '';
+  if(!arquivo) return;
+  let projeto;
+  try{
+    const texto = await arquivo.text();
+    projeto = JSON.parse(texto);
+  }catch(err){
+    toast('O arquivo não parece ser um projeto válido.');
+    return;
+  }
+
+  document.getElementById('campo-empresa').value = projeto.empresa || '';
+  document.getElementById('campo-frente').value = projeto.frente_servico || '';
+  document.getElementById('campo-encarregado').value = projeto.encarregado || '';
+  if(projeto.servico) document.getElementById('campo-servico').value = projeto.servico;
+
+  const container = document.getElementById('linhas-container');
+  container.innerHTML = '';
+
+  const linhasDados = projeto.linhas || [];
+  if(linhasDados.length === 0){
+    adicionarLinha();
+  }else{
+    linhasDados.forEach(linhaDict=>{
+      const linha = criarLinha();
+      container.appendChild(linha);
+      if(linhaDict.zelador1) carregarZeladorDeProjeto(linha._z1, linhaDict.zelador1);
+      if(linhaDict.zelador2) carregarZeladorDeProjeto(linha._z2, linhaDict.zelador2);
+    });
+  }
+  toast('Projeto importado.');
+});
+
+// ---------- Geração do PDF ----------
+
+const MARGEM = 10;
+const MARGEM_INFERIOR = 15;
+const ALTURA_CELULA_FOTO = 53;
+const PAGE_W = 210;
+const PAGE_H = 297;
+const LIMITE_INFERIOR = PAGE_H - MARGEM_INFERIOR;
+
+function coletarDados(){
+  const empresa = document.getElementById('campo-empresa').value.trim();
+  const frente = document.getElementById('campo-frente').value.trim();
+  const encarregado = document.getElementById('campo-encarregado').value.trim();
+  const servico = document.getElementById('campo-servico').value;
+
+  if(!empresa || !frente || !encarregado || !servico){
+    toast('Preencha empresa, serviço, frente de serviço e encarregado.');
+    return null;
+  }
+
+  const zeladores = [];
+  Array.from(document.getElementById('linhas-container').children).forEach(linha=>{
+    const d1 = lerZeladorField(linha._z1);
+    const d2 = lerZeladorField(linha._z2);
+    if(d1) zeladores.push(d1);
+    if(d2) zeladores.push(d2);
+  });
+
+  if(zeladores.length === 0){
+    toast('Preencha ao menos um zelador antes de gerar o PDF.');
+    return null;
+  }
+
+  return {empresa, frente, encarregado, servico, zeladores};
+}
+
+function gerarPDF(dados){
+  const { jsPDF } = window.jspdf;
+  const pdf = new jsPDF({unit:'mm', format:'a4'});
+  let y = MARGEM;
+
+  pdf.setFont('helvetica','bold');
+  pdf.setFontSize(16);
+  pdf.text(dados.empresa, PAGE_W/2, y + 6, {align:'center'});
+  y += 10;
+
+  pdf.setFont('helvetica','normal');
+  pdf.setFontSize(9);
+  pdf.setTextColor(120,120,120);
+  const hoje = new Date();
+  const dataGeracao = String(hoje.getDate()).padStart(2,'0')+'/'+String(hoje.getMonth()+1).padStart(2,'0')+'/'+hoje.getFullYear();
+  pdf.text(`Gerado em ${dataGeracao}`, PAGE_W/2, y + 3, {align:'center'});
+  pdf.setTextColor(0,0,0);
+  y += 9;
+
+  pdf.setFont('helvetica','bold');
+  pdf.setFontSize(11);
+  pdf.text(`Frente de serviço: ${dados.frente}`, MARGEM, y); y += 6;
+  pdf.text(`Serviço: ${dados.servico}`, MARGEM, y); y += 6;
+  pdf.text(`Encarregado: ${dados.encarregado}`, MARGEM, y); y += 6;
+  y += 3;
+
+  dados.zeladores.forEach((zelador, idx)=>{
+    if(idx > 0){
+      y += 4;
+      if(y < LIMITE_INFERIOR - 20){
+        pdf.setDrawColor(200,200,200);
+        pdf.line(MARGEM, y, PAGE_W - MARGEM, y);
+        y += 6;
+      }
+    }
+
+    if(y > LIMITE_INFERIOR - 25){
+      pdf.addPage();
+      y = MARGEM;
+    }
+
+    pdf.setFillColor(230,230,230);
+    pdf.rect(MARGEM, y, PAGE_W - 2*MARGEM, 8, 'F');
+    pdf.setFont('helvetica','bold');
+    pdf.setFontSize(12);
+    pdf.text(`${zelador.nome} - ${zelador.tipo}`, MARGEM + 2, y + 5.5);
+    y += 8;
+
+    pdf.setFont('helvetica','normal');
+    pdf.setFontSize(10);
+    pdf.text(`Regional: ${zelador.regional}    Rua: ${zelador.rua}`, MARGEM, y + 5); y += 6;
+    pdf.text(`Horário: ${zelador.hora}    Data: ${zelador.data}`, MARGEM, y + 5); y += 6;
+    y += 2;
+
+    if(zelador.fotos.length){
+      y = desenharFotos(pdf, zelador.fotos, zelador.fotosDim, y);
+    }else{
+      pdf.setFont('helvetica','italic');
+      pdf.setFontSize(10);
+      pdf.setTextColor(140,140,140);
+      pdf.text('Nenhuma foto anexada', MARGEM, y + 5);
+      pdf.setTextColor(0,0,0);
+      y += 8 + 3;
+    }
+  });
+
+  return pdf;
+}
+
+function desenharFotos(pdf, fotos, dims, yInicio){
+  const larguraUtil = PAGE_W - 2*MARGEM;
+  const larguraCelula = larguraUtil / 2;
+  let col = 0;
+  let yLinha = yInicio;
+
+  fotos.forEach((dataUrl, i)=>{
+    if(yLinha + ALTURA_CELULA_FOTO > LIMITE_INFERIOR){
+      pdf.addPage();
+      yLinha = MARGEM;
+      col = 0;
+    }
+    const cx = MARGEM + col * larguraCelula;
+    const cy = yLinha;
+    desenharImagemCentralizada(pdf, dataUrl, dims[i], cx, cy, larguraCelula, ALTURA_CELULA_FOTO);
+
+    col += 1;
+    if(col > 1){
+      col = 0;
+      yLinha += ALTURA_CELULA_FOTO;
+    }
+  });
+
+  let yFinal = (col === 0) ? yLinha : yLinha + ALTURA_CELULA_FOTO;
+  yFinal += 2;
+  return yFinal;
+}
+
+function detectarFormato(dataUrl){
+  if(dataUrl.startsWith('data:image/png')) return 'PNG';
+  if(dataUrl.startsWith('data:image/webp')) return 'WEBP';
+  return 'JPEG';
+}
+
+function desenharImagemCentralizada(pdf, dataUrl, dim, x, y, wBox, hBox){
+  const margemInterna = 4;
+  const xBox = x + margemInterna/2;
+  const yBox = y + margemInterna/2;
+  const wDisp = wBox - margemInterna;
+  const hDisp = hBox - margemInterna;
+
+  if(!dim || !dim.w || !dim.h) return;
+
+  const escala = Math.min(wDisp/dim.w, hDisp/dim.h);
+  const wFinal = dim.w * escala;
+  const hFinal = dim.h * escala;
+  const xFinal = xBox + (wDisp - wFinal)/2;
+  const yFinal = yBox + (hDisp - hFinal)/2;
+
+  try{
+    pdf.addImage(dataUrl, detectarFormato(dataUrl), xFinal, yFinal, wFinal, hFinal);
+  }catch(err){
+    // formato não suportado diretamente - tenta JPEG como fallback
+    try{ pdf.addImage(dataUrl, 'JPEG', xFinal, yFinal, wFinal, hFinal); }catch(e2){}
+  }
+}
+
+document.getElementById('btn-gerar').addEventListener('click', ()=>{
+  const dados = coletarDados();
+  if(!dados) return;
+
+  const btn = document.getElementById('btn-gerar');
+  const textoOriginal = btn.textContent;
+  btn.textContent = 'Gerando...';
+  btn.disabled = true;
+
+  setTimeout(()=>{
+    try{
+      const pdf = gerarPDF(dados);
+      const hoje = new Date();
+      const iso = hoje.toISOString().slice(0,10);
+      const nomeArquivo = `${dados.empresa}-${iso}.pdf`.replace(/\s+/g,'_');
+      pdf.save(nomeArquivo);
+      toast('PDF gerado com sucesso.');
+    }catch(err){
+      console.error(err);
+      toast('Ocorreu um erro ao gerar o PDF.');
+    }finally{
+      btn.textContent = textoOriginal;
+      btn.disabled = false;
+    }
+  }, 30);
+});
+</script>
+</body>
+</html>
